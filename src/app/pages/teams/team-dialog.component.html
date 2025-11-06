@@ -1,0 +1,25 @@
+<h2 mat-dialog-title>{{ (data?.team?.id ? 'Edit' : 'Add') }} Team</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form">
+    <mat-form-field appearance="fill" style="width:100%;">
+      <mat-label>Country</mat-label>
+      <input matInput formControlName="country" cdkFocusInitial>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" style="width:100%;">
+      <mat-label>Manager</mat-label>
+      <input matInput formControlName="managerName">
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" style="width:100%;">
+      <mat-label>Representative Email</mat-label>
+      <input matInput formControlName="representativeEmail" type="email">
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-button color="primary" (click)="save()" [disabled]="form.invalid">Save</button>
+</mat-dialog-actions>

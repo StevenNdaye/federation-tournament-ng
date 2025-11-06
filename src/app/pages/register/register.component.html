@@ -1,0 +1,86 @@
+<mat-card class="card">
+  <h2>Register Federation</h2>
+
+  <div class="steps">
+    <div class="step" [class.active]="step===1">1. Details</div>
+    <div class="step" [class.active]="step===2">2. Squad (23)</div>
+    <div class="step" [class.active]="step===3">3. Confirm</div>
+  </div>
+
+  <ng-container *ngIf="step===1">
+    <div class="grid">
+      <div>
+        <label>Country</label>
+        <select [(ngModel)]="country">
+          <option value="" disabled>Select country</option>
+          <option *ngFor="let c of countries" [value]="c">{{ c }}</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Manager</label>
+        <input type="text" [(ngModel)]="manager" placeholder="Full name">
+      </div>
+
+      <div>
+        <label>Representative Email (optional)</label>
+        <input type="email" [(ngModel)]="representativeEmail" placeholder="email@domain.com">
+      </div>
+
+      <div>
+        <label>Badge (optional)</label>
+        <div class="badges">
+          <img *ngFor="let b of badges" [src]="b" [class.selected]="badgeUrl===b" (click)="badgeUrl=b">
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button mat-raised-button color="primary" (click)="generate()">Generate 23 Players</button>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="step===2">
+    <h3>Pick a Captain</h3>
+    <table class="table">
+      <thead>
+      <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Nat Pos</th>
+        <th>GK</th>
+        <th>DF</th>
+        <th>MD</th>
+        <th>AT</th>
+        <th>Captain</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let p of players; let i=index" (click)="pickCaptain(i)" [class.row-active]="p.isCaptain">
+        <td>{{ i + 1 }}</td>
+        <td>{{ p.name }}</td>
+        <td>{{ p.naturalPosition }}</td>
+        <td>{{ p.ratings.GK }}</td>
+        <td>{{ p.ratings.DF }}</td>
+        <td>{{ p.ratings.MD }}</td>
+        <td>{{ p.ratings.AT }}</td>
+        <td>{{ p.isCaptain ? '★' : '' }}</td>
+      </tr>
+      </tbody>
+    </table>
+    <div class="actions">
+      <button mat-stroked-button (click)="step=1">Back</button>
+      <button mat-raised-button color="primary" (click)="step=3">Continue</button>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="step===3">
+    <p><strong>Country:</strong> {{ country }}</p>
+    <p><strong>Manager:</strong> {{ manager }}</p>
+    <p><strong>Squad size:</strong> {{ players.length }}</p>
+    <div class="actions">
+      <button mat-stroked-button (click)="step=2">Back</button>
+      <button mat-raised-button color="primary" (click)="submit()">Submit</button>
+    </div>
+  </ng-container>
+</mat-card>

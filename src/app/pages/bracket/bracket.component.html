@@ -1,0 +1,23 @@
+<mat-card class="card">
+  <div class="header">
+    <h2>Road to the Final</h2>
+    <button mat-raised-button color="primary" (click)="startTournament()" [disabled]="teams.length<8">
+      Start Tournament (needs 8+ teams)
+    </button>
+  </div>
+
+  <div class="grid">
+    <div>
+      <h3>Quarter Finals</h3>
+      <app-match-card *ngFor="let m of (qf$ | async)" [match]="m"></app-match-card>
+    </div>
+    <div>
+      <h3>Semi Finals</h3>
+      <app-match-card *ngFor="let m of (sf$ | async)" [match]="m"></app-match-card>
+    </div>
+    <div>
+      <h3>Final</h3>
+      <app-match-card *ngFor="let m of (f$ | async)" [match]="m"></app-match-card>
+    </div>
+  </div>
+</mat-card>

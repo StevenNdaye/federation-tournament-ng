@@ -1,0 +1,86 @@
+.card {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 16px;
+}
+
+.steps {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+
+.step {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  opacity: .7;
+}
+
+.step.active {
+  background: #111827;
+  color: #fff;
+  border-color: #1f2937;
+  opacity: 1;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+select, input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.badges {
+  display: grid;
+  grid-template-columns:repeat(auto-fit, minmax(80px, 1fr));
+  gap: 10px;
+}
+
+.badges img {
+  width: 100%;
+  height: 56px;
+  object-fit: contain;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.badges img.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, .25);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 8px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.row-active {
+  background: #eef2ff;
+}
