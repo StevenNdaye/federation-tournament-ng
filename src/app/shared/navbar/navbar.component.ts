@@ -14,6 +14,7 @@ export class NavbarComponent {
   }
 
   go(p: string) {
+    console.log('go', p);
     this.router.navigateByUrl(p);
   }
 }

@@ -21,12 +21,14 @@ import {MatchComponent} from './pages/match/match.component';
 import {MatchCardComponent} from './pages/match/match-card.component';
 import {ScorersComponent} from './pages/scorers/scorers.component';
 import {RegisterFederationComponent} from "./pages/register/register.component";
+import {LoginComponent} from "./auth/login/login.component";
 
 @NgModule({
   declarations: [
     AppComponent, NavbarComponent, HomeComponent,
     RegisterFederationComponent, TeamsComponent, TeamDialogComponent,
-    BracketComponent, MatchComponent, MatchCardComponent, ScorersComponent
+    BracketComponent, MatchComponent, MatchCardComponent, ScorersComponent,
+    LoginComponent
   ],
   imports: [
     BrowserModule, BrowserAnimationsModule, FormsModule, ReactiveFormsModule,

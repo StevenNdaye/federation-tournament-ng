@@ -23,10 +23,17 @@ export class RegisterFederationComponent {
   loading = false;
 
   badges = [
-    'https://d64gsu...f353c4ed.webp', 'https://d64gsu...24ac30cf.webp',
-    'https://d64gsu...7f3bb7ce.webp', 'https://d64gsu...42e9c635.webp',
-    'https://d64gsu...d1e7985c.webp', 'https://d64gsu...f3dca31a.webp'
+    'https://flagcdn.com/w160/gh.png', // Ghana
+    'https://flagcdn.com/w160/ng.png', // Nigeria
+    'https://flagcdn.com/w160/za.png', // South Africa
+    'https://flagcdn.com/w160/eg.png', // Egypt
+    'https://flagcdn.com/w160/ma.png', // Morocco
+    'https://flagcdn.com/w160/sn.png', // Senegal
+    'https://flagcdn.com/w160/dz.png', // Algeria
+    'https://flagcdn.com/w160/cm.png', // Cameroon
   ];
+
+
 
   constructor(private teams: TeamService, private snack: MatSnackBar, private router: Router) {
   }

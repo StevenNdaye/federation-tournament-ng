@@ -84,3 +84,24 @@ select, input {
 .row-active {
   background: #eef2ff;
 }
+
+.badges img {
+  width: 100%;
+  height: 72px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+  transition: transform .15s ease;
+}
+
+.badges img:hover {
+  transform: scale(1.03);
+}
+
+.badges img.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, .25);
+}
+
