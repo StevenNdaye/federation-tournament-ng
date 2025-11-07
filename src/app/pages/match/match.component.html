@@ -1,23 +1,14 @@
-<mat-card class="card" *ngIf="match">
-  <h2>Match</h2>
-  <p><b>Stage:</b> {{ match.stage }}</p>
-  <p><b>Home:</b> {{ home?.country || match.homeTeamId }} — <b>{{ match.homeScore }}</b></p>
-  <p><b>Away:</b> {{ away?.country || match.awayTeamId }} — <b>{{ match.awayScore }}</b></p>
-  <p><b>Status:</b> {{ match.status }}</p>
+<ng-container *ngIf="match$ | async as m">
+  <mat-card>
+    <h2>{{ m.stage }} #{{ m.pair }}</h2>
+    <p>{{ nameOf(m.homeTeamId) }} {{ m.homeScore }} : {{ m.awayScore }} {{ nameOf(m.awayTeamId) }}</p>
 
-  <div class="actions">
-    <button mat-raised-button color="primary" (click)="simulate()" [disabled]="loading || match.status==='completed'">
+    <p>Status: {{ m.status }} | Decision: {{ m.decision || '—' }}</p>
+
+    <button mat-raised-button color="primary"
+            (click)="simulate(m)"
+            [disabled]="m.status === 'completed'">
       Simulate
     </button>
-    <button mat-stroked-button (click)="play()" [disabled]="loading || match.status==='completed'">Play (with
-      commentary)
-    </button>
-  </div>
-
-  <div *ngIf="match.commentary?.length">
-    <h3>Commentary</h3>
-    <ul>
-      <li *ngFor="let c of match.commentary">{{ c }}</li>
-    </ul>
-  </div>
-</mat-card>
+  </mat-card>
+</ng-container>

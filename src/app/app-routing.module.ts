@@ -15,9 +15,9 @@ import {AdminComponent} from "./pages/admin/admin.component";
 const routes: Routes = [
   {path: '', component: HomeComponent},
   {path: 'login', component: LoginComponent},
-  {path: 'bracket', component: BracketComponent},       // public
-  {path: 'match/:id', component: MatchComponent},       // public
-  {path: 'scorers', component: ScorersComponent},       // public
+  {path: 'bracket', component: BracketComponent},
+  {path: 'match/:id', component: MatchComponent},
+  {path: 'scorers', component: ScorersComponent},
   {path: 'register', component: RegisterFederationComponent, canActivate: [AuthGuard]},
   {path: 'teams', component: TeamsComponent, canActivate: [AuthGuard]},
   {path: 'admin', component: AdminComponent, canActivate: [AdminGuard]},

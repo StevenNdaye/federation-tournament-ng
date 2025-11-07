@@ -7,6 +7,7 @@
     <div class="step" [class.active]="step===3">3. Confirm</div>
   </div>
 
+  <!-- STEP 1 -->
   <ng-container *ngIf="step===1">
     <div class="grid">
       <div>
@@ -19,18 +20,24 @@
 
       <div>
         <label>Manager</label>
-        <input type="text" [(ngModel)]="manager" placeholder="Full name">
+        <input type="text" [(ngModel)]="manager" placeholder="Full name"/>
       </div>
 
       <div>
         <label>Representative Email (optional)</label>
-        <input type="email" [(ngModel)]="representativeEmail" placeholder="email@domain.com">
+        <input type="email" [(ngModel)]="representativeEmail" placeholder="email@domain.com"/>
       </div>
 
       <div>
         <label>Badge (optional)</label>
         <div class="badges">
-          <img *ngFor="let b of badges" [src]="b" [class.selected]="badgeUrl===b" (click)="badgeUrl=b">
+          <img
+            *ngFor="let b of badges"
+            [src]="b"
+            [class.selected]="badgeUrl===b"
+            (click)="badgeUrl=b"
+            alt="badge"
+          />
         </div>
       </div>
     </div>
@@ -40,6 +47,7 @@
     </div>
   </ng-container>
 
+  <!-- STEP 2 -->
   <ng-container *ngIf="step===2">
     <h3>Pick a Captain</h3>
     <table class="table">
@@ -56,7 +64,11 @@
       </tr>
       </thead>
       <tbody>
-      <tr *ngFor="let p of players; let i=index" (click)="pickCaptain(i)" [class.row-active]="p.isCaptain">
+      <tr
+        *ngFor="let p of players; let i=index"
+        (click)="pickCaptain(i)"
+        [class.row-active]="p.isCaptain"
+      >
         <td>{{ i + 1 }}</td>
         <td>{{ p.name }}</td>
         <td>{{ p.naturalPosition }}</td>
@@ -74,13 +86,18 @@
     </div>
   </ng-container>
 
+  <!-- STEP 3 -->
   <ng-container *ngIf="step===3">
     <p><strong>Country:</strong> {{ country }}</p>
     <p><strong>Manager:</strong> {{ manager }}</p>
     <p><strong>Squad size:</strong> {{ players.length }}</p>
+    <p><strong>Badge:</strong> <img *ngIf="badgeUrl" [src]="badgeUrl" height="40"/></p>
+
     <div class="actions">
       <button mat-stroked-button (click)="step=2">Back</button>
-      <button mat-raised-button color="primary" (click)="submit()">Submit</button>
+      <button mat-raised-button color="primary" (click)="submit()" [disabled]="loading">
+        Submit
+      </button>
     </div>
   </ng-container>
 </mat-card>

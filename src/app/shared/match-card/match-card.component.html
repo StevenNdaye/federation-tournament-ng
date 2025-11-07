@@ -1,0 +1,23 @@
+<mat-card class="mc" (click)="open()" tabindex="0" role="button">
+  <div class="row"><strong>Stage:</strong> {{ match.stage }}</div>
+
+  <div class="row team" [ngClass]="outcomeClass('home')">
+    <span>Home:</span>
+    <span>{{ nameOf(match.homeTeamId) }} {{ match.homeScore }}</span>
+  </div>
+
+  <div class="row team" [ngClass]="outcomeClass('away')">
+    <span>Away:</span>
+    <span>{{ nameOf(match.awayTeamId) }} {{ match.awayScore }}</span>
+  </div>
+
+  <div class="row">
+    <strong>Status:</strong>
+    <span>
+      {{ match.status }}
+      <ng-container *ngIf="match.status==='completed' && match.decision">
+        &nbsp;| Decision: {{ match.decision }}
+      </ng-container>
+    </span>
+  </div>
+</mat-card>

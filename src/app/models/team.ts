@@ -9,4 +9,5 @@ export interface Team {
   rating: number;
   players: Player[];
   createdAt?: number;
+  updatedAt?: number;
 }

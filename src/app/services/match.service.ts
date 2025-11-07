@@ -1,17 +1,17 @@
 import {Injectable} from '@angular/core';
 import {AngularFirestore} from '@angular/fire/compat/firestore';
 import {Match} from '../models/match';
-import {map, Observable} from 'rxjs';
+import {Observable} from 'rxjs';
 
 @Injectable({providedIn: 'root'})
 export class MatchService {
   constructor(private afs: AngularFirestore) {
   }
 
-  listByStage(stage: 'QF' | 'SF' | 'F'): Observable<Match[]> {
-    return this.afs.collection<Match>('matches', ref => ref.where('stage', '==', stage).orderBy('createdAt', 'asc'))
-      .snapshotChanges()
-      .pipe(map(s => s.map(x => ({id: x.payload.doc.id, ...(x.payload.doc.data() as Match)}))));
+  listByStage(stage: 'QF' | 'SF' | 'F', tid: string) {
+    return this.afs.collection<Match>('matches', ref =>
+      ref.where('tournamentId', '==', tid).where('stage', '==', stage)
+    ).valueChanges({idField: 'id'});
   }
 
   listCompleted(): Observable<Match[]> {

@@ -128,23 +128,75 @@ exports.notifyOnMatchComplete = (0, firestore_2.onDocumentWritten)({
 exports.advanceOnComplete = (0, firestore_2.onDocumentWritten)({ document: 'matches/{matchId}', region }, async (event) => {
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
-    if (!after || after.status !== 'completed' || (before && before.status === 'completed'))
+    console.log('[advanceOnComplete] fired', {
+        id: event.params?.matchId,
+        beforeStatus: before?.status,
+        afterStatus: after?.status,
+        stage: after?.stage,
+        pair: after?.pair,
+        tournamentId: after?.tournamentId ?? null,
+    });
+    // Only act when a match transitions -> completed
+    if (!after || after.status !== 'completed') {
+        console.log('[advanceOnComplete] skip: after missing or not completed');
         return;
+    }
+    if (before && before.status === 'completed') {
+        console.log('[advanceOnComplete] skip: already completed previously');
+        return;
+    }
+    const tournamentId = after.tournamentId ?? null;
     const stage = after.stage;
-    const pair = after.pair;
-    const who = winnerOf(after);
+    const pair = Number(after.pair);
+    const who = (() => {
+        const hs = after.homeScore ?? 0, as = after.awayScore ?? 0;
+        if (hs > as)
+            return 'home';
+        if (as > hs)
+            return 'away';
+        if (['home', 'homeET', 'homePens'].includes(after.decision))
+            return 'home';
+        if (['away', 'awayET', 'awayPens'].includes(after.decision))
+            return 'away';
+        return Math.random() < 0.5 ? 'home' : 'away';
+    })();
     const winnerTeamId = who === 'home' ? after.homeTeamId : after.awayTeamId;
-    const { nextStage, nextPair, nextSlot } = nextSlotFor(stage, pair);
-    if (!nextStage || !nextPair || !nextSlot)
+    // Compute destination (SF/F + slot)
+    const next = (() => {
+        if (stage === 'QF') {
+            if (pair === 1)
+                return { nextStage: 'SF', nextPair: 1, nextSlot: 'home' };
+            if (pair === 2)
+                return { nextStage: 'SF', nextPair: 1, nextSlot: 'away' };
+            if (pair === 3)
+                return { nextStage: 'SF', nextPair: 2, nextSlot: 'home' };
+            if (pair === 4)
+                return { nextStage: 'SF', nextPair: 2, nextSlot: 'away' };
+        }
+        if (stage === 'SF') {
+            if (pair === 1)
+                return { nextStage: 'F', nextPair: 1, nextSlot: 'home' };
+            if (pair === 2)
+                return { nextStage: 'F', nextPair: 1, nextSlot: 'away' };
+        }
+        return { nextStage: null };
+    })();
+    const { nextStage, nextPair, nextSlot } = next;
+    if (!nextStage || !nextPair || !nextSlot) {
+        console.log('[advanceOnComplete] no next stage/slot for this match');
         return;
-    const q = await db
-        .collection('matches')
+    }
+    // Query for the next match *within the same tournament (if present)*
+    let qRef = db.collection('matches')
         .where('stage', '==', nextStage)
-        .where('pair', '==', nextPair)
-        .limit(1)
-        .get();
+        .where('pair', '==', nextPair);
+    if (tournamentId) {
+        qRef = qRef.where('tournamentId', '==', tournamentId);
+    }
+    const q = await qRef.limit(1).get();
     const now = Date.now();
     if (q.empty) {
+        // Create the next match shell in the same tournament
         const payload = {
             stage: nextStage,
             pair: nextPair,
@@ -156,22 +208,31 @@ exports.advanceOnComplete = (0, firestore_2.onDocumentWritten)({ document: 'matc
             createdAt: now,
             updatedAt: now,
         };
-        if (nextSlot === 'home')
-            payload.homeTeamId = winnerTeamId, payload.awayTeamId = '__TBD__';
-        else
-            payload.homeTeamId = '__TBD__', payload.awayTeamId = winnerTeamId;
-        await db.collection('matches').add(payload);
-        console.log(`Created next match ${nextStage}-${nextPair} with ${nextSlot}=${winnerTeamId}`);
+        if (tournamentId)
+            payload.tournamentId = tournamentId;
+        if (nextSlot === 'home') {
+            payload.homeTeamId = winnerTeamId;
+            payload.awayTeamId = '__TBD__';
+        }
+        else {
+            payload.homeTeamId = '__TBD__';
+            payload.awayTeamId = winnerTeamId;
+        }
+        const docRef = await db.collection('matches').add(payload);
+        console.log(`[advanceOnComplete] created ${nextStage}-${nextPair} (${nextSlot}=${winnerTeamId}) id=${docRef.id}`);
     }
     else {
+        // Patch the existing next match
         const doc = q.docs[0];
         const patch = { updatedAt: now };
         if (nextSlot === 'home')
             patch.homeTeamId = winnerTeamId;
         else
             patch.awayTeamId = winnerTeamId;
+        if (tournamentId)
+            patch.tournamentId = tournamentId; // keep it consistent if missing
         await doc.ref.update(patch);
-        console.log(`Updated next match ${nextStage}-${nextPair} set ${nextSlot}=${winnerTeamId}`);
+        console.log(`[advanceOnComplete] updated ${nextStage}-${nextPair} (${nextSlot}=${winnerTeamId}) id=${doc.id}`);
     }
 });
 // ---------- Identity mirroring (v1 triggers on v6) ----------

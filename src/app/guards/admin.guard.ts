@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {CanActivate, Router, UrlTree} from '@angular/router';
 import {AngularFireAuth} from '@angular/fire/compat/auth';
 import {AngularFirestore} from '@angular/fire/compat/firestore';
-import {firstValueFrom, map, switchMap, of} from 'rxjs';
+import {firstValueFrom, map} from 'rxjs';
 
 @Injectable({providedIn: 'root'})
 export class AdminGuard implements CanActivate {
@@ -13,7 +13,6 @@ export class AdminGuard implements CanActivate {
     const user = await firstValueFrom(this.afAuth.authState);
     if (!user) return this.router.parseUrl('/login');
 
-    // admins/{uid} doc existence == admin
     const isAdmin$ = this.afs.doc(`admins/${user.uid}`).valueChanges().pipe(
       map(doc => !!doc)
     );

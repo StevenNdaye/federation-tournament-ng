@@ -20,7 +20,6 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.sub = this.admin.listProfiles().subscribe(async profiles => {
-      // For each profile, fetch role + admin flags in parallel
       const enriched = await Promise.all(profiles.map(async p => {
         const [roleSnap, adminSnap] = await Promise.all([
           this.admin.getRole(p.id).pipe(map(r => r?.role as Role | undefined)).toPromise(),
@@ -53,7 +52,6 @@ export class AdminComponent implements OnInit, OnDestroy {
     try {
       await this.admin.setAdmin(uid, makeAdmin);
       this.snack.open(makeAdmin ? 'Admin granted' : 'Admin revoked', 'OK', {duration: 1500});
-      // reflect immediately
       const row = this.rows.find(r => r.id === uid);
       if (row) row.isAdmin = makeAdmin;
     } catch (e: any) {

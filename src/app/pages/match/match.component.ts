@@ -1,120 +1,123 @@
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import {MatchService} from '../../services/match.service';
-import {Match} from '../../models/match';
-import {TeamService} from '../../services/team.service';
-import {Team} from '../../models/team';
+import {AngularFirestore} from '@angular/fire/compat/firestore';
+import {map, switchMap} from 'rxjs/operators';
+import {Observable, firstValueFrom} from 'rxjs';
 import {MatSnackBar} from '@angular/material/snack-bar';
+import {Team} from "../../models/team";
+import {TeamService} from "../../services/team.service";
+
+export interface Match {
+  id?: string;
+  tournamentId: string;
+  stage: 'QF' | 'SF' | 'F';
+  pair: number;
+  status: 'scheduled' | 'inprogress' | 'completed';
+  mode: 'simulate' | 'play';
+  homeTeamId: string;
+  awayTeamId: string;
+  homeScore: number;
+  awayScore: number;
+  goals: Array<{ minute: number; teamId: string; playerId: string }>;
+  decision?: 'home' | 'away' | 'homeET' | 'awayET' | 'homePens' | 'awayPens';
+  createdAt?: number;
+  updatedAt?: number;
+}
 
 @Component({
   selector: 'app-match',
-  templateUrl: './match.component.html',
-  styleUrls: ['./match.component.css']
+  templateUrl: './match.component.html'
 })
 export class MatchComponent implements OnInit {
-  match?: Match;
-  home?: Team;
-  away?: Team;
-  loading = false;
+  match$!: Observable<Match | undefined>;
+  teams: Team[] = [];
 
   constructor(
     private route: ActivatedRoute,
-    private matches: MatchService,
-    private teams: TeamService,
-    private snack: MatSnackBar
+    private afs: AngularFirestore,
+    private snack: MatSnackBar,
+    private teamSvc: TeamService
   ) {
+    this.teamSvc.list().subscribe(ts => this.teams = ts || []);
+  }
+
+  nameOf(id?: string) {
+    return this.teams.find(t => t.id === id)?.country || id || '—';
   }
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id')!;
-    this.matches.get(id).subscribe(m => {
-      this.match = m || undefined;
-      if (m?.homeTeamId) this.teams.get(m.homeTeamId).subscribe(t => this.home = t || undefined);
-      if (m?.awayTeamId) this.teams.get(m.awayTeamId).subscribe(t => this.away = t || undefined);
-    });
+    this.match$ = this.route.paramMap.pipe(
+      switchMap(p =>
+        this.afs.doc<Match>(`matches/${p.get('id')}`).snapshotChanges()
+      ),
+      map(snap => {
+        const data = snap.payload.data();
+        if (!data) return undefined;
+        return {id: snap.payload.id, ...(data as Match)};
+      })
+    );
   }
 
-  async simulate() {
-    if (!this.match) return;
-    this.loading = true;
-    try {
-      const homeScore = Math.floor(Math.random() * 5);
-      const awayScore = Math.floor(Math.random() * 5);
-      // Ensure a decision for auto-advance
-      let decision: Match['decision'] | undefined;
-      if (homeScore === awayScore) decision = Math.random() < 0.5 ? 'homePens' : 'awayPens';
-      else decision = homeScore > awayScore ? 'home' : 'away';
+  private uniqueMinutes(total: number): number[] {
+    const s = new Set<number>();
+    while (s.size < total) s.add(1 + Math.floor(Math.random() * 90));
+    return Array.from(s).sort((a, b) => a - b);
+  }
 
-      await this.matches.update(this.match.id!, {
-        homeScore, awayScore, status: 'completed', mode: 'simulate',
-        goals: [], commentary: [], decision
-      });
-      this.snack.open('Simulated & completed. Auto-advance will run.', 'OK', {duration: 2500});
-    } finally {
-      this.loading = false;
+  private pickScorers(team: Team | undefined, count: number): string[] {
+    const players = team?.players || [];
+    if (!players.length) return Array(count).fill('Unknown');
+    const ordered = [
+      ...players.filter((p: any) => p.naturalPosition === 'AT'),
+      ...players.filter((p: any) => p.naturalPosition === 'MD'),
+      ...players.filter((p: any) => p.naturalPosition === 'DF'),
+      ...players.filter((p: any) => p.naturalPosition === 'GK'),
+    ];
+    const pool = ordered.length ? ordered : players;
+    return Array.from({length: count}, () => pool[Math.floor(Math.random() * pool.length)].name);
+  }
+
+  async simulate(m: Match | undefined) {
+    if (!m?.id) {
+      console.warn('simulate: missing match id', m);
+      this.snack.open('Match id missing – cannot simulate', 'Close', {duration: 3000});
+      return;
     }
-  }
 
-  async play() {
-    if (!this.match) return;
-    this.loading = true;
     try {
-      const commentary: string[] = [];
-      const goals: { minute: number, teamId: string, playerId: string }[] = [];
-      const minuteEvents = [5, 12, 19, 27, 34, 41, 52, 60, 68, 75, 82, 88];
+      const home = Math.floor(Math.random() * 5);
+      const away = Math.floor(Math.random() * 5);
+      let decision: Match['decision'];
+      if (home !== away) decision = home > away ? 'home' : 'away';
+      else decision = Math.random() < 0.5 ? 'homePens' : 'awayPens';
 
-      let homeGoals = 0, awayGoals = 0;
+      const [homeTeam, awayTeam] = await Promise.all([
+        firstValueFrom(this.teamSvc.get(m.homeTeamId)),
+        firstValueFrom(this.teamSvc.get(m.awayTeamId)),
+      ]);
 
-      for (const m of minuteEvents) {
-        if (Math.random() < 0.20) {
-          const atk = Math.random() < 0.5 ? 'home' : 'away';
-          commentary.push(`${m}' Big chance for the ${atk} side!`);
-          if (Math.random() < 0.40) {
-            const teamId = atk === 'home' ? this.match.homeTeamId : this.match.awayTeamId;
-            goals.push({minute: m, teamId, playerId: 'unknown'});
-            if (atk === 'home') homeGoals++; else awayGoals++;
-            commentary.push(`${m}' GOAL! ${atk === 'home' ? 'Home' : 'Away'} side scores!`);
-          }
-        }
-      }
-      commentary.push(`90' Full time: ${homeGoals}-${awayGoals}.`);
+      const mins = this.uniqueMinutes(home + away);
+      const homeScorers = this.pickScorers(homeTeam, home);
+      const awayScorers = this.pickScorers(awayTeam, away);
 
-      let decision: Match['decision'] | undefined;
+      const goals: Match['goals'] = [
+        ...homeScorers.map((name, i) => ({minute: mins[i], teamId: m.homeTeamId, playerId: name})),
+        ...awayScorers.map((name, j) => ({minute: mins[home + j], teamId: m.awayTeamId, playerId: name})),
+      ].sort((a, b) => a.minute - b.minute);
 
-      if (homeGoals === awayGoals) {
-        commentary.push('Match goes to Extra Time.');
-        if (Math.random() < 0.5) {
-          const atk = Math.random() < 0.5 ? 'home' : 'away';
-          const minute = 105 + Math.floor(Math.random() * 15);
-          const teamId = atk === 'home' ? this.match.homeTeamId : this.match.awayTeamId;
-          goals.push({minute, teamId, playerId: 'unknown'});
-          if (atk === 'home') homeGoals++; else awayGoals++;
-          commentary.push(`${minute}' Extra Time GOAL for the ${atk} side!`);
-          decision = atk === 'home' ? 'homeET' : 'awayET';
-          commentary.push(`120' ET ends: ${homeGoals}-${awayGoals}.`);
-        } else {
-          commentary.push('No goals in Extra Time. We go to penalties.');
-          const pensWinner = Math.random() < 0.5 ? 'home' : 'away';
-          decision = pensWinner === 'home' ? 'homePens' : 'awayPens';
-          commentary.push(`Penalties: ${pensWinner === 'home' ? 'Home' : 'Away'} wins the shootout!`);
-        }
-      } else {
-        decision = homeGoals > awayGoals ? 'home' : 'away';
-      }
-
-      await this.matches.update(this.match.id!, {
-        homeScore: homeGoals,
-        awayScore: awayGoals,
-        status: 'completed',
-        mode: 'play',
+      await this.afs.doc(`matches/${m.id}`).update({
+        homeScore: home,
+        awayScore: away,
         goals,
-        commentary,
-        decision
+        decision,
+        status: 'completed',
+        updatedAt: Date.now()
       });
 
-      this.snack.open('Played & completed. Auto-advance created/updated next round.', 'OK', {duration: 3000});
-    } finally {
-      this.loading = false;
+      this.snack.open('Match completed ✔', 'OK', {duration: 2000});
+    } catch (e: any) {
+      console.error('simulate failed', e);
+      this.snack.open(e?.message ?? 'Simulate failed', 'Close', {duration: 4000});
     }
   }
 }

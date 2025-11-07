@@ -1,23 +1,82 @@
 <mat-card class="card">
-  <div class="header">
-    <h2>Road to the Final</h2>
-    <button mat-raised-button color="primary" (click)="startTournament()" [disabled]="teams.length<8">
-      Start Tournament (needs 8+ teams)
-    </button>
+  <div class="header"
+       style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+    <div>
+      <h2 style="margin:0;">Road to the Final</h2>
+      <div *ngIf="activeTid" style="font-size:12px; opacity:.8;">Active Tournament: {{ activeTid }}</div>
+    </div>
+
+    <div class="actions" style="display:flex; gap:8px;">
+      <button mat-raised-button color="primary"
+              (click)="startTournament()"
+              [disabled]="teams.length < 8">
+        Start Tournament (needs 8+ teams)
+      </button>
+
+      <button mat-stroked-button color="warn"
+              (click)="newTournament()">
+        New Tournament
+      </button>
+    </div>
   </div>
 
-  <div class="grid">
-    <div>
+  <!-- Content grid -->
+  <div class="grid" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-top:16px;">
+    <!-- QFs -->
+    <section>
       <h3>Quarter Finals</h3>
-      <app-match-card *ngFor="let m of (qf$ | async)" [match]="m"></app-match-card>
-    </div>
-    <div>
+
+      <ng-container *ngIf="qf$ | async as qfs; else qfLoading">
+        <p *ngIf="!qfs?.length" style="opacity:.7; margin:8px 0 0;">
+          No Quarter-Final matches yet. Click <strong>Start Tournament</strong> to seed QFs.
+        </p>
+        <app-match-card *ngFor="let m of qfs" [match]="m"></app-match-card>
+      </ng-container>
+
+      <ng-template #qfLoading>
+        <p style="opacity:.7;">Loading QFs…</p>
+      </ng-template>
+    </section>
+
+    <!-- SFs -->
+    <section>
       <h3>Semi Finals</h3>
-      <app-match-card *ngFor="let m of (sf$ | async)" [match]="m"></app-match-card>
-    </div>
-    <div>
+
+      <ng-container *ngIf="sf$ | async as sfs; else sfLoading">
+        <p *ngIf="!sfs?.length" style="opacity:.7; margin:8px 0 0;">
+          Semis appear automatically after QF winners are decided.
+        </p>
+        <app-match-card *ngFor="let m of sfs" [match]="m"></app-match-card>
+      </ng-container>
+
+      <ng-template #sfLoading>
+        <p style="opacity:.7;">Loading SFs…</p>
+      </ng-template>
+    </section>
+
+    <!-- Final -->
+    <section>
       <h3>Final</h3>
-      <app-match-card *ngFor="let m of (f$ | async)" [match]="m"></app-match-card>
-    </div>
+
+      <ng-container *ngIf="f$ | async as finals; else fLoading">
+        <p *ngIf="!finals?.length" style="opacity:.7; margin:8px 0 0;">
+          Final appears automatically after both Semis are completed.
+        </p>
+        <app-match-card *ngFor="let m of finals" [match]="m"></app-match-card>
+      </ng-container>
+
+      <ng-template #fLoading>
+        <p style="opacity:.7;">Loading Final…</p>
+      </ng-template>
+    </section>
+  </div>
+
+  <div style="margin-top:16px; font-size:12px; opacity:.8;">
+    <p style="margin:0 0 4px 0;">
+      Tip: Click a match card to open it. Use <strong>Simulate</strong> to complete the match; the winner auto-advances.
+    </p>
+    <p style="margin:0;">
+      Pairing logic: QF1+QF2 → SF1, QF3+QF4 → SF2, SF1+SF2 → Final.
+    </p>
   </div>
 </mat-card>

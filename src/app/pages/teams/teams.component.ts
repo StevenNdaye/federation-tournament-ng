@@ -3,20 +3,17 @@ import {MatDialog} from '@angular/material/dialog';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {Observable} from 'rxjs';
 import {TeamDialogComponent} from './team-dialog.component';
-import {Team} from "../../models/team";
-import {TeamService} from "../../services/team.service";
+import {Team} from '../../models/team';
+import {TeamService} from '../../services/team.service';
 
 @Component({
   selector: 'app-teams',
   templateUrl: './teams.component.html'
 })
 export class TeamsComponent implements OnInit {
-  displayedColumns = ['country', 'managerName', 'rating', 'actions'];
+  displayedColumns = ['country', 'manager', 'rating', 'actions'];
 
-  // stream (if you still want it around)
   teams$: Observable<Team[]> = this.teamSvc.list();
-
-  // concrete data for the table
   teams: Team[] = [];
 
   constructor(
@@ -33,7 +30,7 @@ export class TeamsComponent implements OnInit {
   add() {
     const ref = this.dialog.open(TeamDialogComponent, {
       width: '420px',
-      data: {team: {country: '', managerName: '', representativeEmail: ''}}
+      data: {team: {country: '', manager: '', representativeEmail: ''}}
     });
     ref.afterClosed().subscribe((result?: { team: Partial<Team> }) => {
       if (result?.team?.country) {

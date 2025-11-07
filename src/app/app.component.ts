@@ -7,6 +7,8 @@ import {AuthService} from './services/auth.service';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
+  title = 'federation-tournament-ng';
+
   constructor(public auth: AuthService) {
   }
 }

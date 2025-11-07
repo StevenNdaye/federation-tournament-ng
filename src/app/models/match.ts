@@ -8,6 +8,7 @@ export type MatchStatus = 'scheduled' | 'in_progress' | 'completed';
 
 export interface Match {
   id?: string;
+  tournamentId: string;
   homeTeamId: string;
   awayTeamId: string;
   homeScore: number;

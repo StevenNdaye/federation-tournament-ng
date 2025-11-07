@@ -1,25 +1,18 @@
-// functions/src/index.ts
-
-import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import * as admin from 'firebase-admin';
-
-import { onDocumentWritten } from 'firebase-functions/v2/firestore';
-import { defineSecret } from 'firebase-functions/params';
-import { auth as authV1 } from 'firebase-functions/v1'; // <-- v1 auth triggers live here in v6
+import {initializeApp} from 'firebase-admin/app';
+import {getFirestore} from 'firebase-admin/firestore';
+import {onDocumentWritten} from 'firebase-functions/v2/firestore';
+import {defineSecret} from 'firebase-functions/params';
+import {auth as authV1} from 'firebase-functions/v1';
 import * as nodemailer from 'nodemailer';
 
 initializeApp();
 const db = getFirestore();
 
-// Deploy to your closest Google Cloud region:
 const region = 'africa-south1';
 
-// ---- Secrets (set via: firebase functions:secrets:set MAIL_USER / MAIL_PASS) ----
-const MAIL_USER = defineSecret('MAIL_USER'); // your Gmail address
-const MAIL_PASS = defineSecret('MAIL_PASS'); // 16-char Gmail App Password
+const MAIL_USER = defineSecret('MAIL_USER');
+const MAIL_PASS = defineSecret('MAIL_PASS');
 
-// ---------- Types & helpers ----------
 type Stage = 'QF' | 'SF' | 'F';
 
 function winnerOf(after: any): 'home' | 'away' {
@@ -34,19 +27,18 @@ function winnerOf(after: any): 'home' | 'away' {
 
 function nextSlotFor(stage: Stage, pair: number) {
   if (stage === 'QF') {
-    if (pair === 1) return { nextStage: 'SF' as Stage, nextPair: 1, nextSlot: 'home' as const };
-    if (pair === 2) return { nextStage: 'SF' as Stage, nextPair: 1, nextSlot: 'away' as const };
-    if (pair === 3) return { nextStage: 'SF' as Stage, nextPair: 2, nextSlot: 'home' as const };
-    if (pair === 4) return { nextStage: 'SF' as Stage, nextPair: 2, nextSlot: 'away' as const };
+    if (pair === 1) return {nextStage: 'SF' as Stage, nextPair: 1, nextSlot: 'home' as const};
+    if (pair === 2) return {nextStage: 'SF' as Stage, nextPair: 1, nextSlot: 'away' as const};
+    if (pair === 3) return {nextStage: 'SF' as Stage, nextPair: 2, nextSlot: 'home' as const};
+    if (pair === 4) return {nextStage: 'SF' as Stage, nextPair: 2, nextSlot: 'away' as const};
   }
   if (stage === 'SF') {
-    if (pair === 1) return { nextStage: 'F' as Stage, nextPair: 1, nextSlot: 'home' as const };
-    if (pair === 2) return { nextStage: 'F' as Stage, nextPair: 1, nextSlot: 'away' as const };
+    if (pair === 1) return {nextStage: 'F' as Stage, nextPair: 1, nextSlot: 'home' as const};
+    if (pair === 2) return {nextStage: 'F' as Stage, nextPair: 1, nextSlot: 'away' as const};
   }
-  return { nextStage: null as null };
+  return {nextStage: null as null};
 }
 
-// ---------- Function 1: Email on match completion ----------
 export const notifyOnMatchComplete = onDocumentWritten(
   {
     document: 'matches/{matchId}',
@@ -57,7 +49,6 @@ export const notifyOnMatchComplete = onDocumentWritten(
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
 
-    // Only proceed when status changed to 'completed'
     if (!after || after.status !== 'completed' || (before && before.status === 'completed')) return;
 
     const user = MAIL_USER.value();
@@ -69,7 +60,7 @@ export const notifyOnMatchComplete = onDocumentWritten(
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: { user, pass },
+      auth: {user, pass},
     });
 
     try {
@@ -93,7 +84,7 @@ export const notifyOnMatchComplete = onDocumentWritten(
         `${after.homeTeamId} ${after.homeScore} : ${after.awayScore} ${after.awayTeamId}\n\n` +
         `Mode: ${after.mode}\n`;
 
-      await transporter.sendMail({ from: user, to, subject, text: body });
+      await transporter.sendMail({from: user, to, subject, text: body});
       console.log(`Mail sent to: ${to}`);
     } catch (e: any) {
       console.error('notifyOnMatchComplete failed:', e?.message || e);
@@ -101,30 +92,73 @@ export const notifyOnMatchComplete = onDocumentWritten(
   }
 );
 
-// ---------- Function 2: Auto-advance winners ----------
 export const advanceOnComplete = onDocumentWritten(
-  { document: 'matches/{matchId}', region },
+  {document: 'matches/{matchId}', region},
   async (event) => {
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
 
-    if (!after || after.status !== 'completed' || (before && before.status === 'completed')) return;
+    console.log('[advanceOnComplete] fired', {
+      id: event.params?.matchId,
+      beforeStatus: before?.status,
+      afterStatus: after?.status,
+      stage: after?.stage,
+      pair: after?.pair,
+      tournamentId: after?.tournamentId ?? null,
+    });
 
-    const stage: Stage = after.stage as Stage;
-    const pair: number = after.pair;
-    const who = winnerOf(after);
+    if (!after || after.status !== 'completed') {
+      console.log('[advanceOnComplete] skip: after missing or not completed');
+      return;
+    }
+    if (before && before.status === 'completed') {
+      console.log('[advanceOnComplete] skip: already completed previously');
+      return;
+    }
+
+    const tournamentId: string | null = after.tournamentId ?? null;
+    const stage = after.stage as 'QF' | 'SF' | 'F';
+    const pair = Number(after.pair);
+    const who: 'home' | 'away' = (() => {
+      const hs = after.homeScore ?? 0, as = after.awayScore ?? 0;
+      if (hs > as) return 'home';
+      if (as > hs) return 'away';
+      if (['home', 'homeET', 'homePens'].includes(after.decision)) return 'home';
+      if (['away', 'awayET', 'awayPens'].includes(after.decision)) return 'away';
+      return Math.random() < 0.5 ? 'home' : 'away';
+    })();
+
     const winnerTeamId = who === 'home' ? after.homeTeamId : after.awayTeamId;
 
-    const { nextStage, nextPair, nextSlot } = nextSlotFor(stage, pair);
-    if (!nextStage || !nextPair || !nextSlot) return;
+    const next = ((): { nextStage: 'SF' | 'F' | null; nextPair?: number; nextSlot?: 'home' | 'away' } => {
+      if (stage === 'QF') {
+        if (pair === 1) return {nextStage: 'SF', nextPair: 1, nextSlot: 'home'};
+        if (pair === 2) return {nextStage: 'SF', nextPair: 1, nextSlot: 'away'};
+        if (pair === 3) return {nextStage: 'SF', nextPair: 2, nextSlot: 'home'};
+        if (pair === 4) return {nextStage: 'SF', nextPair: 2, nextSlot: 'away'};
+      }
+      if (stage === 'SF') {
+        if (pair === 1) return {nextStage: 'F', nextPair: 1, nextSlot: 'home'};
+        if (pair === 2) return {nextStage: 'F', nextPair: 1, nextSlot: 'away'};
+      }
+      return {nextStage: null};
+    })();
 
-    const q = await db
-      .collection('matches')
+    const {nextStage, nextPair, nextSlot} = next;
+    if (!nextStage || !nextPair || !nextSlot) {
+      console.log('[advanceOnComplete] no next stage/slot for this match');
+      return;
+    }
+
+    let qRef = db.collection('matches')
       .where('stage', '==', nextStage)
-      .where('pair', '==', nextPair)
-      .limit(1)
-      .get();
+      .where('pair', '==', nextPair as number);
 
+    if (tournamentId) {
+      qRef = qRef.where('tournamentId', '==', tournamentId);
+    }
+
+    const q = await qRef.limit(1).get();
     const now = Date.now();
 
     if (q.empty) {
@@ -139,24 +173,31 @@ export const advanceOnComplete = onDocumentWritten(
         createdAt: now,
         updatedAt: now,
       };
-      if (nextSlot === 'home') payload.homeTeamId = winnerTeamId, payload.awayTeamId = '__TBD__';
-      else payload.homeTeamId = '__TBD__', payload.awayTeamId = winnerTeamId;
+      if (tournamentId) payload.tournamentId = tournamentId;
+      if (nextSlot === 'home') {
+        payload.homeTeamId = winnerTeamId;
+        payload.awayTeamId = '__TBD__';
+      } else {
+        payload.homeTeamId = '__TBD__';
+        payload.awayTeamId = winnerTeamId;
+      }
 
-      await db.collection('matches').add(payload);
-      console.log(`Created next match ${nextStage}-${nextPair} with ${nextSlot}=${winnerTeamId}`);
+      const docRef = await db.collection('matches').add(payload);
+      console.log(`[advanceOnComplete] created ${nextStage}-${nextPair} (${nextSlot}=${winnerTeamId}) id=${docRef.id}`);
     } else {
+      // Patch the existing next match
       const doc = q.docs[0];
-      const patch: any = { updatedAt: now };
+      const patch: any = {updatedAt: now};
       if (nextSlot === 'home') patch.homeTeamId = winnerTeamId; else patch.awayTeamId = winnerTeamId;
+      if (tournamentId) patch.tournamentId = tournamentId; // keep it consistent if missing
       await doc.ref.update(patch);
-      console.log(`Updated next match ${nextStage}-${nextPair} set ${nextSlot}=${winnerTeamId}`);
+      console.log(`[advanceOnComplete] updated ${nextStage}-${nextPair} (${nextSlot}=${winnerTeamId}) id=${doc.id}`);
     }
   }
 );
 
-// ---------- Identity mirroring (v1 triggers on v6) ----------
 export const onAuthUserCreated = authV1.user().onCreate(async (user) => {
-  const { uid, email, displayName, photoURL, providerData } = user;
+  const {uid, email, displayName, photoURL, providerData} = user;
   await db.doc(`userProfiles/${uid}`).set({
     uid,
     email: email || null,
@@ -164,16 +205,16 @@ export const onAuthUserCreated = authV1.user().onCreate(async (user) => {
     photoURL: photoURL || null,
     providers: (providerData || []).map(p => p.providerId),
     createdAt: Date.now(),
-  }, { merge: true });
+  }, {merge: true});
 
   const roleRef = db.doc(`userRoles/${uid}`);
   if (!(await roleRef.get()).exists) {
-    await roleRef.set({ role: 'representative', createdAt: Date.now() });
+    await roleRef.set({role: 'representative', createdAt: Date.now()});
   }
 });
 
 export const onAuthUserDeleted = authV1.user().onDelete(async (user) => {
-  const { uid } = user;
+  const {uid} = user;
   await Promise.allSettled([
     db.doc(`userProfiles/${uid}`).delete(),
     db.doc(`userRoles/${uid}`).delete(),

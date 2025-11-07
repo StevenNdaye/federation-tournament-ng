@@ -1,8 +1,7 @@
 import {Component} from '@angular/core';
 import {africanCountries} from '../../utils/african-countries';
-import {generatePlayers, calculateTeamRating} from '../../utils/player-generator';
+import {calculateTeamRating, generatePlayers} from '../../utils/player-generator';
 import {Player} from '../../models/player';
-import {Team} from '../../models/team';
 import {TeamService} from '../../services/team.service';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {Router} from '@angular/router';
@@ -33,9 +32,11 @@ export class RegisterFederationComponent {
     'https://flagcdn.com/w160/cm.png', // Cameroon
   ];
 
-
-
-  constructor(private teams: TeamService, private snack: MatSnackBar, private router: Router) {
+  constructor(
+    private teams: TeamService,
+    private snack: MatSnackBar,
+    private router: Router
+  ) {
   }
 
   generate() {
@@ -52,17 +53,27 @@ export class RegisterFederationComponent {
       this.snack.open('Please complete all steps', 'Close', {duration: 3000});
       return;
     }
+
     this.loading = true;
     try {
       const rating = calculateTeamRating(this.players);
-      const team: Team = {
+
+      const team: any = {
         country: this.country,
         manager: this.manager,
-        representativeEmail: this.representativeEmail || undefined,
-        badgeUrl: this.badgeUrl || undefined,
         rating,
-        players: this.players
+        players: this.players,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
       };
+
+      if (this.representativeEmail?.trim()) {
+        team.representativeEmail = this.representativeEmail.trim();
+      }
+      if (this.badgeUrl) {
+        team.badgeUrl = this.badgeUrl;
+      }
+
       await this.teams.add(team);
       this.snack.open('Federation registered!', 'OK', {duration: 2000});
       this.router.navigateByUrl('/teams');

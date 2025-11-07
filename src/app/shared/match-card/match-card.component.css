@@ -1,0 +1,31 @@
+.mc {
+  margin: 8px 0;
+  cursor: pointer;
+}
+
+.mc:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .15);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.team {
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.win {
+  color: #0f9d58;
+  font-weight: 600;
+  background: rgba(15, 157, 88, .08);
+}
+
+.lose {
+  color: #d93025;
+  background: rgba(217, 48, 37, .06);
+}
