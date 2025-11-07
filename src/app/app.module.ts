@@ -22,17 +22,20 @@ import {MatchCardComponent} from './pages/match/match-card.component';
 import {ScorersComponent} from './pages/scorers/scorers.component';
 import {RegisterFederationComponent} from "./pages/register/register.component";
 import {LoginComponent} from "./auth/login/login.component";
+import {AdminComponent} from './pages/admin/admin.component';
+import {RouterModule} from "@angular/router";
 
 @NgModule({
   declarations: [
     AppComponent, NavbarComponent, HomeComponent,
     RegisterFederationComponent, TeamsComponent, TeamDialogComponent,
     BracketComponent, MatchComponent, MatchCardComponent, ScorersComponent,
-    LoginComponent
+    LoginComponent,
+    AdminComponent
   ],
   imports: [
     BrowserModule, BrowserAnimationsModule, FormsModule, ReactiveFormsModule,
-    MaterialModule,
+    MaterialModule, RouterModule,
     AngularFireModule.initializeApp(environment.firebase),
     AngularFirestoreModule, AngularFireAuthModule,
     AppRoutingModule

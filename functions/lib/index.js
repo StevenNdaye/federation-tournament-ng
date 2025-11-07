@@ -34,17 +34,18 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.advanceOnComplete = exports.notifyOnMatchComplete = void 0;
+exports.onAuthUserDeleted = exports.onAuthUserCreated = exports.advanceOnComplete = exports.notifyOnMatchComplete = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const firestore_2 = require("firebase-functions/v2/firestore");
 const params_1 = require("firebase-functions/params");
+const v1_1 = require("firebase-functions/v1"); // <-- v1 auth triggers live here in v6
 const nodemailer = __importStar(require("nodemailer"));
 (0, app_1.initializeApp)();
 const db = (0, firestore_1.getFirestore)();
 // Deploy to your closest Google Cloud region:
 const region = 'africa-south1';
-// ---- Secrets (set these via CLI; see below) ----
+// ---- Secrets (set via: firebase functions:secrets:set MAIL_USER / MAIL_PASS) ----
 const MAIL_USER = (0, params_1.defineSecret)('MAIL_USER'); // your Gmail address
 const MAIL_PASS = (0, params_1.defineSecret)('MAIL_PASS'); // 16-char Gmail App Password
 function winnerOf(after) {
@@ -90,7 +91,6 @@ exports.notifyOnMatchComplete = (0, firestore_2.onDocumentWritten)({
     // Only proceed when status changed to 'completed'
     if (!after || after.status !== 'completed' || (before && before.status === 'completed'))
         return;
-    // Lazily create transporter with secrets at runtime
     const user = MAIL_USER.value();
     const pass = MAIL_PASS.value();
     if (!user || !pass) {
@@ -102,7 +102,6 @@ exports.notifyOnMatchComplete = (0, firestore_2.onDocumentWritten)({
         auth: { user, pass },
     });
     try {
-        // Load team emails (adjust collection paths to your schema)
         const [homeSnap, awaySnap] = await Promise.all([
             db.doc(`federations/${after.homeTeamId}`).get(),
             db.doc(`federations/${after.awayTeamId}`).get(),
@@ -110,9 +109,7 @@ exports.notifyOnMatchComplete = (0, firestore_2.onDocumentWritten)({
         const to = [
             homeSnap.data()?.representativeEmail,
             awaySnap.data()?.representativeEmail,
-        ]
-            .filter(Boolean)
-            .join(',');
+        ].filter(Boolean).join(',');
         if (!to) {
             console.log('No recipient email found; skipping send.');
             return;
@@ -159,14 +156,10 @@ exports.advanceOnComplete = (0, firestore_2.onDocumentWritten)({ document: 'matc
             createdAt: now,
             updatedAt: now,
         };
-        if (nextSlot === 'home') {
-            payload.homeTeamId = winnerTeamId;
-            payload.awayTeamId = '__TBD__';
-        }
-        else {
-            payload.homeTeamId = '__TBD__';
-            payload.awayTeamId = winnerTeamId;
-        }
+        if (nextSlot === 'home')
+            payload.homeTeamId = winnerTeamId, payload.awayTeamId = '__TBD__';
+        else
+            payload.homeTeamId = '__TBD__', payload.awayTeamId = winnerTeamId;
         await db.collection('matches').add(payload);
         console.log(`Created next match ${nextStage}-${nextPair} with ${nextSlot}=${winnerTeamId}`);
     }
@@ -180,4 +173,28 @@ exports.advanceOnComplete = (0, firestore_2.onDocumentWritten)({ document: 'matc
         await doc.ref.update(patch);
         console.log(`Updated next match ${nextStage}-${nextPair} set ${nextSlot}=${winnerTeamId}`);
     }
+});
+// ---------- Identity mirroring (v1 triggers on v6) ----------
+exports.onAuthUserCreated = v1_1.auth.user().onCreate(async (user) => {
+    const { uid, email, displayName, photoURL, providerData } = user;
+    await db.doc(`userProfiles/${uid}`).set({
+        uid,
+        email: email || null,
+        displayName: displayName || null,
+        photoURL: photoURL || null,
+        providers: (providerData || []).map(p => p.providerId),
+        createdAt: Date.now(),
+    }, { merge: true });
+    const roleRef = db.doc(`userRoles/${uid}`);
+    if (!(await roleRef.get()).exists) {
+        await roleRef.set({ role: 'representative', createdAt: Date.now() });
+    }
+});
+exports.onAuthUserDeleted = v1_1.auth.user().onDelete(async (user) => {
+    const { uid } = user;
+    await Promise.allSettled([
+        db.doc(`userProfiles/${uid}`).delete(),
+        db.doc(`userRoles/${uid}`).delete(),
+        db.doc(`admins/${uid}`).delete(),
+    ]);
 });

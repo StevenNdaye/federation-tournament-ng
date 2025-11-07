@@ -1,0 +1,40 @@
+<mat-card class="card">
+  <h2>User & Role Management</h2>
+
+  <table class="table">
+    <thead>
+    <tr>
+      <th>Email</th>
+      <th>Name</th>
+      <th>Providers</th>
+      <th>Role</th>
+      <th>Admin</th>
+      <th style="width:160px;">Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr *ngFor="let u of rows">
+      <td>{{ u.email || '—' }}</td>
+      <td>{{ u.displayName || '—' }}</td>
+      <td>{{ u.providers?.join(', ') || '—' }}</td>
+      <td>
+        <select [disabled]="saving[u.id]" [ngModel]="u.role" (ngModelChange)="applyRole(u.id, $event)">
+          <option value="representative">representative</option>
+          <option value="admin">admin</option>
+        </select>
+      </td>
+      <td>
+        <span class="pill" [class.ok]="u.isAdmin" [class.no]="!u.isAdmin">{{ u.isAdmin ? 'yes' : 'no' }}</span>
+      </td>
+      <td>
+        <button mat-stroked-button color="primary" [disabled]="saving[u.id] || u.isAdmin"
+                (click)="toggleAdmin(u.id, true)">Make Admin
+        </button>
+        <button mat-stroked-button color="warn" [disabled]="saving[u.id] || !u.isAdmin"
+                (click)="toggleAdmin(u.id, false)">Remove Admin
+        </button>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</mat-card>

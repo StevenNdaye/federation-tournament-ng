@@ -10,6 +10,7 @@ import {AuthGuard} from './guards/auth.guard';
 import {RegisterFederationComponent} from "./pages/register/register.component";
 import {AdminGuard} from "./guards/admin.guard";
 import {LoginComponent} from "./auth/login/login.component";
+import {AdminComponent} from "./pages/admin/admin.component";
 
 const routes: Routes = [
   {path: '', component: HomeComponent},
@@ -19,10 +20,10 @@ const routes: Routes = [
   {path: 'scorers', component: ScorersComponent},       // public
   {path: 'register', component: RegisterFederationComponent, canActivate: [AuthGuard]},
   {path: 'teams', component: TeamsComponent, canActivate: [AuthGuard]},
-  // {path: 'admin', component: AdminComponent, canActivate: [AdminGuard]}, // optional
+  {path: 'admin', component: AdminComponent, canActivate: [AdminGuard]},
   {path: '**', redirectTo: ''}
 ];
 
-@NgModule({imports: [RouterModule.forRoot(routes)], exports: [RouterModule]})
+@NgModule({imports: [RouterModule.forRoot(routes, {scrollPositionRestoration: 'enabled'})], exports: [RouterModule]})
 export class AppRoutingModule {
 }

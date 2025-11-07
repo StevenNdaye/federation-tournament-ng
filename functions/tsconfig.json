@@ -1,16 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2020",
     "module": "commonjs",
-    "lib": ["ES2022", "DOM", "ESNext.AsyncIterable", "ESNext.Disposable"],
-    "outDir": "lib",
-    "rootDir": "src",
-    "strict": true,
     "moduleResolution": "node",
+    "outDir": "lib",
     "esModuleInterop": true,
-    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": false,
     "skipLibCheck": true
   },
-  "compileOnSave": true,
   "include": ["src"]
 }

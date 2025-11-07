@@ -1,19 +1,24 @@
 import {Injectable} from '@angular/core';
-import {CanActivate, Router} from '@angular/router';
-import {AuthService} from '../services/auth.service';
-import {map, tap} from 'rxjs/operators';
+import {CanActivate, Router, UrlTree} from '@angular/router';
+import {AngularFireAuth} from '@angular/fire/compat/auth';
+import {AngularFirestore} from '@angular/fire/compat/firestore';
+import {firstValueFrom, map, switchMap, of} from 'rxjs';
 
 @Injectable({providedIn: 'root'})
 export class AdminGuard implements CanActivate {
-  constructor(private auth: AuthService, private router: Router) {
+  constructor(private afAuth: AngularFireAuth, private afs: AngularFirestore, private router: Router) {
   }
 
-  canActivate() {
-    return this.auth.role$.pipe(
-      map(role => role === 'admin'),
-      tap(ok => {
-        if (!ok) this.router.navigateByUrl('/');
-      })
+  async canActivate(): Promise<boolean | UrlTree> {
+    const user = await firstValueFrom(this.afAuth.authState);
+    if (!user) return this.router.parseUrl('/login');
+
+    // admins/{uid} doc existence == admin
+    const isAdmin$ = this.afs.doc(`admins/${user.uid}`).valueChanges().pipe(
+      map(doc => !!doc)
     );
+
+    const ok = await firstValueFrom(isAdmin$);
+    return ok ? true : this.router.parseUrl('/login');
   }
 }

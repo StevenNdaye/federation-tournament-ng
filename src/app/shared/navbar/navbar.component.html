@@ -8,6 +8,14 @@
         <button class="link" (click)="go('/scorers')">Top Scorers</button>
         <button class="link" (click)="go('/register')">Register</button>
         <button class="link" (click)="go('/teams')">Teams</button>
+        <button mat-stroked-button
+                class="link"
+                routerLink="/admin"
+                routerLinkActive="active"
+                type="button">
+          Admin
+        </button>
+<!--        <button class="link" type="button" *ngIf="email" (click)="go('/admin')">Admin</button>-->
       </div>
     </div>
     <div class="right">
