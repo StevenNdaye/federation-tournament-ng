@@ -1,14 +1,63 @@
-<ng-container *ngIf="match$ | async as m">
-  <mat-card>
-    <h2>{{ m.stage }} #{{ m.pair }}</h2>
-    <p>{{ nameOf(m.homeTeamId) }} {{ m.homeScore }} : {{ m.awayScore }} {{ nameOf(m.awayTeamId) }}</p>
+<mat-card class="card" *ngIf="(match$ | async) as m">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <h2>{{ nameOf(m.homeTeamId) }} vs {{ nameOf(m.awayTeamId) }}</h2>
+    <div>
+      <button mat-stroked-button color="primary" (click)="simulate(m)" [disabled]="busy || m.status==='completed'">
+        Simulate
+      </button>
+      <button mat-raised-button color="accent" (click)="play(m)" [disabled]="busy || m.status==='completed'">
+        Play (with commentary)
+      </button>
+    </div>
+  </div>
 
-    <p>Status: {{ m.status }} | Decision: {{ m.decision || '—' }}</p>
+  <p style="margin:8px 0;color:#666">
+    Stage: {{ m.stage }} • Pair {{ m.pair }} • Status: {{ m.status }}
+  </p>
 
-    <button mat-raised-button color="primary"
-            (click)="simulate(m)"
-            [disabled]="m.status === 'completed'">
-      Simulate
-    </button>
-  </mat-card>
-</ng-container>
+  <div class="score" style="font-size:22px;margin:8px 0;">
+    <strong>{{ nameOf(m.homeTeamId) }}</strong> {{ m.homeScore }} – {{ m.awayScore }}
+    <strong>{{ nameOf(m.awayTeamId) }}</strong>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+    <div>
+      <h3 style="margin-top:0">Goals</h3>
+      <table class="table" *ngIf="(m.goals || []).length; else noGoals">
+        <thead>
+        <tr>
+          <th>Min</th>
+          <th>Team</th>
+          <th>Player</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let g of m.goals">
+          <td>{{ g.minute }}′</td>
+          <td>{{ nameOf(g.teamId) }}</td>
+          <td>{{ playerName(g.playerId) || g.playerId }}</td>
+        </tr>
+        </tbody>
+      </table>
+      <ng-template #noGoals><p style="color:#999">No goals yet.</p></ng-template>
+    </div>
+
+    <div>
+      <h3 style="margin-top:0">Commentary</h3>
+      <div
+        style="max-height:300px;overflow:auto;border:1px solid #eee;border-radius:8px;padding:8px;background:#fafafa">
+        <div *ngIf="liveComments.length">
+          <div *ngFor="let c of liveComments" style="margin:4px 0">{{ c }}</div>
+        </div>
+        <div *ngIf="!liveComments.length && !(m.commentary?.length)">
+          <p style="color:#999">Click “Play” to generate a full 90′ timeline (ET/Pens if needed).</p>
+        </div>
+        <div *ngIf="!liveComments.length && (m.commentary?.length)">
+          <div *ngFor="let c of m.commentary" style="margin:4px 0">{{ c }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</mat-card>
