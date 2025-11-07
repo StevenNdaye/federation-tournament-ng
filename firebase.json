@@ -1,9 +1,15 @@
 {
+  "hosting": {
+    "public": "dist/federation-tournament-ng",
+    "ignore": ["**/.*", "**/node_modules/**"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  },
   "firestore": {
     "rules": "firestore.rules"
   },
   "functions": [
     {
+      "region": "africa-south1",
       "codebase": "default",
       "disallowLegacyRuntimeConfig": true,
       "ignore": [

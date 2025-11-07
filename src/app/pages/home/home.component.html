@@ -1,4 +1,124 @@
-<mat-card class="card">
-  <h2>Welcome</h2>
-  <p>Manage federations, generate squads, set up brackets, play or simulate matches, and track top scorers.</p>
+<mat-card class="card" style="padding:24px">
+  <h1 style="margin:0 0 8px">African Nations League — Simulator</h1>
+  <p style="margin:0 0 16px;color:#666">
+    Build teams, seed a knockout bracket (Quarter-Finals → Semi-Finals → Final), then
+    <strong>Play</strong> (with commentary) or <strong>Simulate</strong> matches. Winners auto-advance and
+    federations can be notified by email when results are in.
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 20px">
+    <a mat-raised-button color="primary" routerLink="/register">Register a Federation</a>
+    <a mat-raised-button color="accent" routerLink="/bracket">Open Bracket</a>
+    <a mat-raised-button color="warn" routerLink="/scorers">Top Scorers</a>
+  </div>
+
+  <mat-divider></mat-divider>
+  <section style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:20px 0">
+    <mat-card>
+      <h3 style="margin-top:0">Visitor</h3>
+      <ul style="margin:0 0 0 18px">
+        <li>View the tournament bracket</li>
+        <li>Open any match to see summary or commentary</li>
+        <li>Check the global Top Scorers table</li>
+      </ul>
+    </mat-card>
+    <mat-card>
+      <h3 style="margin-top:0">Federation Representative</h3>
+      <ul style="margin:0 0 0 18px">
+        <li>Sign in and <strong>register a federation</strong> (country, manager)</li>
+        <li>Auto-generate a squad of <strong>23 players</strong> with ratings</li>
+        <li>Optionally provide a contact email for result notifications</li>
+      </ul>
+    </mat-card>
+    <mat-card>
+      <h3 style="margin-top:0">Administrator</h3>
+      <ul style="margin:0 0 0 18px">
+        <li>Start/Reset the tournament (requires <strong>8+ teams</strong>)</li>
+        <li><strong>Play</strong> (commentary) or <strong>Simulate</strong> matches</li>
+        <li>Manage users & roles in the <a routerLink="/admin">Admin</a> panel</li>
+      </ul>
+    </mat-card>
+  </section>
+
+  <mat-divider></mat-divider>
+  <section style="margin:20px 0">
+    <h2 style="margin:0 0 8px">How to run a demo</h2>
+    <ol style="margin:0 0 0 18px">
+      <li>Sign in (bottom-right of the top bar if logged out).</li>
+      <li>As a representative, go to <a routerLink="/register">Register</a> and create a federation:
+        choose a country, enter the manager, generate a 23-player squad, pick a captain, submit.
+      </li>
+      <li>Repeat until you have at least <strong>8 federations</strong>.</li>
+      <li>As an administrator, open <a routerLink="/bracket">Bracket</a> and click
+        <strong>Start Tournament</strong>. This seeds 4 Quarter-Finals (QF1..QF4).
+      </li>
+      <li>Open any QF match:
+        <ul>
+          <li><strong>Simulate</strong>: instant result + goal scorers.</li>
+          <li><strong>Play</strong>: generates a 90’ timeline; ET/Pens if needed.</li>
+        </ul>
+      </li>
+      <li>On completion, the winner <strong>auto-advances</strong>:
+        QF1+QF2 → SF1, QF3+QF4 → SF2, then SF1+SF2 → Final.
+      </li>
+      <li>(Optional) If federation emails were provided, the platform sends an email with the result.</li>
+      <li>View global rankings in <a routerLink="/scorers">Top Scorers</a>.</li>
+      <li>Need a fresh run? From <a routerLink="/bracket">Bracket</a>, click <strong>New Tournament</strong>
+        (admin only) to wipe and re-seed from Quarter-Finals.
+      </li>
+    </ol>
+  </section>
+
+  <mat-divider></mat-divider>
+  <section style="margin:20px 0">
+    <h2 style="margin:0 0 8px">Player ratings & team strength</h2>
+    <p style="margin:0 0 8px;color:#666">
+      Each player has a natural position (GK, DF, MD, AT). Ratings are auto-assigned:
+      natural position → <strong>50–100</strong>, other positions → <strong>0–50</strong>.
+      A team’s overall rating is the <strong>average</strong> across its 23 players.
+    </p>
+  </section>
+
+  <mat-divider></mat-divider>
+  <section style="margin:20px 0">
+    <h2 style="margin:0 0 8px">Pages & access</h2>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
+      <mat-card>
+        <h3 style="margin-top:0">Public</h3>
+        <ul style="margin:0 0 0 18px">
+          <li><a routerLink="/bracket">Bracket</a> (Road to Final)</li>
+          <li>Match pages (summary/commentary)</li>
+          <li><a routerLink="/scorers">Top Scorers</a></li>
+        </ul>
+      </mat-card>
+      <mat-card>
+        <h3 style="margin-top:0">Protected</h3>
+        <ul style="margin:0 0 0 18px">
+          <li><a routerLink="/register">Register Federation</a> (signed-in)</li>
+          <li><a routerLink="/teams">Teams</a> (signed-in)</li>
+          <li><a routerLink="/admin">Admin</a> (admins only)</li>
+        </ul>
+      </mat-card>
+    </div>
+  </section>
+
+  <mat-divider></mat-divider>
+  <section style="margin:20px 0">
+    <h2 style="margin:0 0 8px">Tips for a smooth demo</h2>
+    <ul style="margin:0 0 0 18px">
+      <li>Have 7 federations pre-registered; add the 8th live during the demo.</li>
+      <li>Show both flows: one <em>Simulate</em> and one <em>Play</em> with commentary.</li>
+      <li>Point out winners are highlighted (green) and losers (red) on the bracket after results.</li>
+      <li>Show the email notification (if you captured representative emails).</li>
+      <li>Finish by resetting with <strong>New Tournament</strong> to prove repeatability.</li>
+    </ul>
+  </section>
+
+  <mat-divider></mat-divider>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px">
+    <a mat-stroked-button routerLink="/register">Register a Federation</a>
+    <a mat-stroked-button routerLink="/bracket">Go to Bracket</a>
+    <a mat-stroked-button routerLink="/scorers">See Top Scorers</a>
+    <a mat-stroked-button routerLink="/admin">Admin Panel</a>
+  </div>
 </mat-card>

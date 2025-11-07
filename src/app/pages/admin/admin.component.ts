@@ -1,63 +1,125 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
-import {AdminService, UserProfile} from '../../services/admin.service';
-import {map, Subscription} from 'rxjs';
-import {MatSnackBar} from '@angular/material/snack-bar';
+import { Component, OnInit } from '@angular/core';
+import { AngularFirestore } from '@angular/fire/compat/firestore';
+import { AngularFireAuth } from '@angular/fire/compat/auth';
+import { combineLatest, map, of, switchMap, Observable } from 'rxjs';
 
-type Role = 'admin' | 'representative';
+type RoleRow = { uid: string; role: string };
+type AdminRow = { uid: string; isAdmin: boolean };
+
+type UserRow = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  providers: string[];
+  role?: string;
+  isAdmin?: boolean;
+};
 
 @Component({
   selector: 'app-admin',
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.css']
 })
-export class AdminComponent implements OnInit, OnDestroy {
-  rows: Array<UserProfile & { id: string, role?: Role, isAdmin?: boolean }> = [];
-  sub?: Subscription;
-  saving: Record<string, boolean> = {};
+export class AdminComponent implements OnInit {
+  displayedColumns = ['email', 'name', 'providers', 'role', 'admin', 'actions'];
+  rows$: Observable<UserRow[]> = of([]);
+  loading = true;
 
-  constructor(private admin: AdminService, private snack: MatSnackBar) {
+  constructor(
+    private afs: AngularFirestore,
+    private afAuth: AngularFireAuth
+  ) {}
+
+  async ngOnInit() {
+    await this.ensureSelfMirrorDocs();
+
+    const profiles$ = this.afs
+      .collection('userProfiles')
+      .valueChanges({ idField: 'uid' }) as Observable<any[]>;
+
+    this.rows$ = profiles$.pipe(
+      switchMap((profiles: any[]) => {
+        if (!profiles?.length) return of([] as UserRow[]);
+
+        const roleGets: Observable<RoleRow>[] = profiles.map(p =>
+          this.afs
+            .doc(`userRoles/${p.uid}`)
+            .valueChanges()
+            .pipe(map((r: any) => ({ uid: p.uid, role: r?.role ?? 'representative' })))
+        );
+
+        const adminGets: Observable<AdminRow>[] = profiles.map(p =>
+          this.afs
+            .doc(`admins/${p.uid}`)
+            .get()
+            .pipe(map(s => ({ uid: p.uid, isAdmin: s.exists })))
+        );
+
+        return combineLatest([
+          combineLatest(roleGets),
+          combineLatest(adminGets)
+        ]).pipe(
+          map(([roles, admins]: [RoleRow[], AdminRow[]]) => {
+            const roleMap = new Map<string, string>(roles.map(r => [r.uid, r.role]));
+            const adminMap = new Map<string, boolean>(admins.map(a => [a.uid, a.isAdmin]));
+
+            const rows: UserRow[] = profiles.map(p => ({
+              uid: p.uid,
+              email: p.email ?? null,
+              displayName: p.displayName ?? null,
+              providers: p.providers ?? [],
+              role: roleMap.get(p.uid) || 'representative',
+              isAdmin: !!adminMap.get(p.uid)
+            }));
+            return rows;
+          })
+        );
+      }),
+      map((rows: UserRow[]) =>
+        rows.sort((a, b) => (a.email || '').localeCompare(b.email || ''))
+      )
+    );
+
+    this.loading = false;
   }
 
-  ngOnInit(): void {
-    this.sub = this.admin.listProfiles().subscribe(async profiles => {
-      const enriched = await Promise.all(profiles.map(async p => {
-        const [roleSnap, adminSnap] = await Promise.all([
-          this.admin.getRole(p.id).pipe(map(r => r?.role as Role | undefined)).toPromise(),
-          this.admin.isAdmin(p.id).pipe(map(a => !!a)).toPromise()
-        ]);
-        return {...p, role: roleSnap || 'representative', isAdmin: adminSnap};
-      }));
-      this.rows = enriched.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
-    });
-  }
+  // ✅ Ensures that your own profile & role docs exist (for users created before functions were deployed)
+  private async ensureSelfMirrorDocs() {
+    const u = await this.afAuth.currentUser;
+    if (!u) return;
 
-  ngOnDestroy(): void {
-    this.sub?.unsubscribe();
-  }
+    const profileRef = this.afs.doc(`userProfiles/${u.uid}`).ref;
+    const roleRef = this.afs.doc(`userRoles/${u.uid}`).ref;
 
-  async applyRole(uid: string, role: Role) {
-    this.saving[uid] = true;
-    try {
-      await this.admin.setRole(uid, role);
-      this.snack.open('Role updated', 'OK', {duration: 1500});
-    } catch (e: any) {
-      this.snack.open(e?.message || 'Failed to update role', 'Close', {duration: 2500});
-    } finally {
-      this.saving[uid] = false;
+    const [pSnap, rSnap] = await Promise.all([profileRef.get(), roleRef.get()]);
+    const batch = this.afs.firestore.batch();
+
+    if (!pSnap.exists) {
+      batch.set(profileRef, {
+        uid: u.uid,
+        email: u.email ?? null,
+        displayName: u.displayName ?? null,
+        photoURL: u.photoURL ?? null,
+        providers: (u.providerData || []).map(p => p?.providerId).filter(Boolean),
+        createdAt: Date.now()
+      } as any, { merge: true } as any);
     }
+
+    if (!rSnap.exists) {
+      batch.set(roleRef, { role: 'representative', createdAt: Date.now() } as any, { merge: true } as any);
+    }
+
+    if (!pSnap.exists || !rSnap.exists) await batch.commit();
   }
 
-  async toggleAdmin(uid: string, makeAdmin: boolean) {
-    this.saving[uid] = true;
-    try {
-      await this.admin.setAdmin(uid, makeAdmin);
-      this.snack.open(makeAdmin ? 'Admin granted' : 'Admin revoked', 'OK', {duration: 1500});
-      const row = this.rows.find(r => r.id === uid);
-      if (row) row.isAdmin = makeAdmin;
-    } catch (e: any) {
-      this.snack.open(e?.message || 'Failed to change admin state', 'Close', {duration: 2500});
-    } finally {
-      this.saving[uid] = false;
-    }
+  async setRole(row: UserRow, role: 'representative' | 'admin' | 'viewer') {
+    await this.afs.doc(`userRoles/${row.uid}`).set({ role, updatedAt: Date.now() }, { merge: true });
+  }
+
+  async toggleAdmin(row: UserRow) {
+    const ref = this.afs.doc(`admins/${row.uid}`).ref;
+    const snap = await ref.get();
+    if (snap.exists) await ref.delete();
+    else await ref.set({ createdAt: Date.now() });
   }
 }

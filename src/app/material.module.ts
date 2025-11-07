@@ -10,12 +10,15 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatInputModule} from '@angular/material/input';
 import {MatSelectModule} from '@angular/material/select';
+import {MatSlideToggleModule} from "@angular/material/slide-toggle";
+import {MatDividerModule} from "@angular/material/divider";
 
 @NgModule({
   exports: [
     MatToolbarModule, MatIconModule, MatCardModule, MatButtonModule,
-    MatSnackBarModule, MatDialogModule, MatTableModule,
-    MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatSelectModule
+    MatSnackBarModule, MatDialogModule, MatTableModule, MatSlideToggleModule,
+    MatProgressSpinnerModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatDividerModule
   ]
 })
 export class MaterialModule {

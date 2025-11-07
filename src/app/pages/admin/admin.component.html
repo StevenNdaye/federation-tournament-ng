@@ -1,40 +1,50 @@
 <mat-card class="card">
   <h2>User & Role Management</h2>
 
-  <table class="table">
-    <thead>
-    <tr>
-      <th>Email</th>
-      <th>Name</th>
-      <th>Providers</th>
-      <th>Role</th>
-      <th>Admin</th>
-      <th style="width:160px;">Actions</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr *ngFor="let u of rows">
-      <td>{{ u.email || '—' }}</td>
-      <td>{{ u.displayName || '—' }}</td>
-      <td>{{ u.providers?.join(', ') || '—' }}</td>
-      <td>
-        <select [disabled]="saving[u.id]" [ngModel]="u.role" (ngModelChange)="applyRole(u.id, $event)">
-          <option value="representative">representative</option>
-          <option value="admin">admin</option>
-        </select>
+  <div *ngIf="loading" style="padding:8px">Loading…</div>
+
+  <table mat-table [dataSource]="(rows$ | async) || []" class="mat-elevation-z2" style="width:100%; margin-top:12px;">
+    <ng-container matColumnDef="email">
+      <th mat-header-cell *matHeaderCellDef>Email</th>
+      <td mat-cell *matCellDef="let r">{{ r.email || '—' }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef>Name</th>
+      <td mat-cell *matCellDef="let r">{{ r.displayName || '—' }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="providers">
+      <th mat-header-cell *matHeaderCellDef>Providers</th>
+      <td mat-cell *matCellDef="let r">{{ r.providers?.join(', ') || '—' }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="role">
+      <th mat-header-cell *matHeaderCellDef>Role</th>
+      <td mat-cell *matCellDef="let r">
+        <mat-select [value]="r.role" (selectionChange)="setRole(r, $event.value)">
+          <mat-option value="representative">Representative</mat-option>
+          <mat-option value="viewer">Viewer</mat-option>
+          <mat-option value="admin">Admin (app role)</mat-option>
+        </mat-select>
       </td>
-      <td>
-        <span class="pill" [class.ok]="u.isAdmin" [class.no]="!u.isAdmin">{{ u.isAdmin ? 'yes' : 'no' }}</span>
+    </ng-container>
+
+    <ng-container matColumnDef="admin">
+      <th mat-header-cell *matHeaderCellDef>Admin</th>
+      <td mat-cell *matCellDef="let r">
+        <mat-slide-toggle [checked]="r.isAdmin" (change)="toggleAdmin(r)"></mat-slide-toggle>
       </td>
-      <td>
-        <button mat-stroked-button color="primary" [disabled]="saving[u.id] || u.isAdmin"
-                (click)="toggleAdmin(u.id, true)">Make Admin
-        </button>
-        <button mat-stroked-button color="warn" [disabled]="saving[u.id] || !u.isAdmin"
-                (click)="toggleAdmin(u.id, false)">Remove Admin
-        </button>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef>Actions</th>
+      <td mat-cell *matCellDef="let r">
+        <!-- reserved for future actions -->
       </td>
-    </tr>
-    </tbody>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
   </table>
 </mat-card>
